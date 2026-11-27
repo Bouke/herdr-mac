@@ -1,3 +1,4 @@
+import AppKit
 import HerdrCore
 import SwiftUI
 
@@ -10,7 +11,14 @@ struct Sidebar: View {
     var body: some View {
         // Mods placed in the sidebar sit under the list, as a sidebar block does in Herdr.
         VStack(spacing: 0) {
-            list
+            // Switching tabs (keys, ⌘W, a tab that ended) brings the new one into view;
+            // anchor nil scrolls only as far as needed, so a visible row stays put.
+            ScrollViewReader { proxy in
+                list.onChange(of: selection) { _, address in
+                    guard let address else { return }
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(address, anchor: nil) }
+                }
+            }
             SidebarMods()
         }
     }
@@ -23,6 +31,7 @@ struct Sidebar: View {
                         ForEach(tab.terminals.filter { store.terminals[$0]?.isLive == true }, id: \.self) { address in
                             TerminalRow(terminal: store.terminals[address]!, tab: tab, split: tab.terminals.count > 1)
                                 .tag(address)
+                                .id(address)
                         }
                     }
                 } header: {
@@ -39,7 +48,7 @@ struct Sidebar: View {
             if !loose.isEmpty {
                 Section("Other terminals") {
                     ForEach(loose) { t in
-                        TerminalRow(terminal: t, tab: nil, split: false).tag(t.address)
+                        TerminalRow(terminal: t, tab: nil, split: false).tag(t.address).id(t.address)
                     }
                 }
             }
@@ -95,29 +104,56 @@ struct ProgramIcon: View {
     let terminal: CoreTerminal
 
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 12, weight: .medium))
-            .frame(width: 22, height: 22)
-            .glassEffect(.regular.tint(tint.opacity(0.35)), in: .rect(cornerRadius: 6))
+        Group {
+            if let icon = ProgramIcons.icon(for: terminal) {
+                Image(nsImage: icon.image)
+                    .renderingMode(icon.tinted ? .template : .original)
+                    .resizable().scaledToFit()
+                    .frame(width: 14, height: 14)
+                    .foregroundStyle(.primary)
+            } else {
+                Image(systemName: terminal.agentApp != nil ? "cpu" : "terminal")
+                    .font(.system(size: 12, weight: .medium))
+            }
+        }
+        .frame(width: 22, height: 22)
+        .glassEffect(.regular, in: .rect(cornerRadius: 6))
+    }
+}
+
+/// Program icons from Herdr's own set (`~/.config/herdr-app/icons/<program>.svg`, the ones
+/// herdr-app shows), and any the person gives a program in programs.json. Logos with their
+/// own colors are drawn as they are; one-color glyphs take the text color.
+enum ProgramIcons {
+    struct Icon { let image: NSImage; let tinted: Bool }
+
+    @MainActor private static var cache: [String: Icon?] = [:]
+
+    @MainActor static func icon(for t: CoreTerminal) -> Icon? {
+        // An agent's own name first (claude-code → claude-code.svg, claude.svg), then what runs.
+        var names: [String] = []
+        if let app = t.agentApp { names += [app, String(app.split(separator: "-").first ?? "")] }
+        if let program = t.program, !t.isShell { names.append(program) }
+        for name in names where !name.isEmpty {
+            if let hit = cache[name] { if let hit { return hit }; continue }
+            let icon = load(name)
+            cache[name] = icon
+            if let icon { return icon }
+        }
+        return nil
     }
 
-    private var symbol: String {
-        switch terminal.agentApp ?? terminal.program ?? "" {
-        case let a where a.contains("claude"): "sparkle"
-        case let a where a.contains("codex"): "chevron.left.forwardslash.chevron.right"
-        case "nvim", "vim", "hx": "pencil.line"
-        case "lazygit", "git": "arrow.triangle.branch"
-        default: terminal.agentApp != nil ? "cpu" : "terminal"
-        }
-    }
-
-    private var tint: Color {
-        switch terminal.agentApp ?? "" {
-        case let a where a.contains("claude"): .orange
-        case let a where a.contains("codex"): .teal
-        case "": .gray
-        default: .indigo
-        }
+    private static func load(_ name: String) -> Icon? {
+        let home = ModHost.appHome
+        let configured = (try? Data(contentsOf: home.appendingPathComponent("programs.json")))
+            .flatMap { try? JSON.parse($0) }?["programs"][name]["icon"].string
+        let url = configured.map { home.appendingPathComponent($0) } ?? home.appendingPathComponent("icons/\(name).svg")
+        guard let image = NSImage(contentsOf: url) else { return nil }
+        // Its own colors (a fill or gradient other than black/white/currentColor): a logo.
+        let svg = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let colors = svg.matches(of: #/fill="(#[0-9a-fA-F]{3,8}|url\([^)]*\))"/#).map { String($0.output.1).lowercased() }
+        let ownColors = colors.contains { !["#fff", "#ffffff", "#000", "#000000"].contains($0) }
+        return Icon(image: image, tinted: !ownColors)
     }
 }
 

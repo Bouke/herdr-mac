@@ -57,6 +57,7 @@ struct MainWindow: View {
             .environment(places)
             .task { look.start(); store.start() }
             .frame(minWidth: 640, minHeight: 360)
+            .background(WindowPlace())
             // A see-through window: the desktop, blurred, behind the glass sidebar
             // and the (translucent) terminal.
             .containerBackground(.ultraThinMaterial, for: .window)

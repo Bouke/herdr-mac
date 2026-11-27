@@ -72,6 +72,8 @@ A Swift port of herdr-app's `src/hc.rs` (Apache-2.0):
 - Keys (a per-window key monitor, before the terminal and the menus): ctrl+tab / ⌘⇧] [ tab
   next/previous, ⌘1…9 tab N, ⌘⌥] [ space, ctrl+1…9 space N, ⌘] [ agent. File menu: New Tab
   ⌘T, New Space ⌘N (folder picker), Close Tab ⌘W (asks when a program still runs).
+- The window comes back where it was (its own saved frame: AppKit's restore picks a screen
+  by size, the wrong one when two screens are the same size).
 - Light/dark follows the system unless herdr-app's `appearance` says otherwise.
 - Updates: `scripts/publish.sh` puts the zip and a `version.json` (build, size, SHA-256,
   notes) in a synced folder named `herdr-mac`; the app finds it under

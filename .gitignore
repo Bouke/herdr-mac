@@ -1,0 +1,7 @@
+.build/
+build/
+Vendor/
+*.xcodeproj/xcuserdata/
+.swiftpm/
+.deps/
+scripts/local.env

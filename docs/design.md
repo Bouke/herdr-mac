@@ -89,7 +89,8 @@ JavaScriptCore, one context per placed copy:
 - A prelude provides "gpui-kit lite": elements record their builder calls (`div()`,
   `h_flex()`, `.px(14)`, `.bg(...)`, `.hover(...)`, `.on_click(...)`), plus `cx` (timers,
   spawn with Task, notify), `InputState`/`Input`, virtual lists and the `herdr` module. Unknown
-  builder calls are recorded and ignored.
+  builder calls are recorded and ignored. `localStorage` is kept between launches (herdr-mac's
+  own copy, first filled from Herdr's `data/<mod>/store.json`).
 - `ModNodeView` draws the recorded tree with SwiftUI, translating GPUI's flex layout
   (stretch, `flex_1`/`min_h(0)`, justify, absolute positioning, percentage widths, scrolling).
   `theme()` gives macOS colors under Herdr's names, so mods fit the window.

@@ -118,6 +118,12 @@ final class ModInstance {
         set("data", { [weak self] (name: String) -> String in
             MainActor.assumeIsolated { self.map { String(decoding: $0.host.data(name, mod: $0.name).data(), as: UTF8.self) } ?? "null" }
         } as @convention(block) (String) -> String)
+        set("storageLoad", { [weak self] () -> String in
+            MainActor.assumeIsolated { self.map { ModStorage.load($0.name) } ?? "{}" }
+        } as @convention(block) () -> String)
+        set("storageSave", { [weak self] (json: String) in
+            MainActor.assumeIsolated { self.map { ModStorage.save($0.name, json) } }
+        } as @convention(block) (String) -> Void)
         set("shared", { [weak self] (key: String) -> String in
             MainActor.assumeIsolated { self.map { String(decoding: $0.host.shared(key).data(), as: UTF8.self) } ?? "null" }
         } as @convention(block) (String) -> String)

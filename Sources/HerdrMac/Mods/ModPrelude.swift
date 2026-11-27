@@ -141,8 +141,10 @@ enum ModPrelude {
   };
   const parse = (s) => (s == null ? null : JSON.parse(s));
   const promise = (start) => new Promise((resolve, reject) => start(resolve, (m) => reject(new Error(m))));
-  const storage = {};
-  globalThis.localStorage = { getItem: (k) => storage[k] ?? null, setItem: (k, v) => { storage[k] = String(v); }, removeItem: (k) => { delete storage[k]; }, clear: () => { for (const k in storage) delete storage[k]; } };
+  // Kept between launches (ModStorage), as Herdr keeps it.
+  const storage = (() => { try { return JSON.parse(H.storageLoad()) ?? {}; } catch { return {}; } })();
+  const persist = () => H.storageSave(JSON.stringify(storage));
+  globalThis.localStorage = { getItem: (k) => storage[k] ?? null, setItem: (k, v) => { storage[k] = String(v); persist(); }, removeItem: (k) => { delete storage[k]; persist(); }, clear: () => { for (const k in storage) delete storage[k]; persist(); } };
   const herdr = {
     spaces: () => parse(H.data("spaces")), agents: () => parse(H.data("agents")), panes: () => parse(H.data("panes")),
     terminals: () => parse(H.data("terminals")), focused: () => parse(H.data("focused")), layout: () => parse(H.data("layout")),

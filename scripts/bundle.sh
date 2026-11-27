@@ -17,7 +17,10 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/HerdrMac"
 # The attach relay each terminal surface runs (see Sources/herdr-mac-attach).
 cp "$(dirname "$BIN")/herdr-mac-attach" "$APP/Contents/MacOS/herdr-mac-attach"
-cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+# The Liquid Glass icon (Icon Composer's Resources/AppIcon.icon): Assets.car for macOS 26,
+# plus the AppIcon.icns actool renders from it for older readers.
+xcrun actool Resources/AppIcon.icon --compile "$APP/Contents/Resources" --app-icon AppIcon --platform macosx \
+  --minimum-deployment-target 26.0 --output-partial-info-plist "$(mktemp -t actool.XXXXXX)" >/dev/null
 # Licenses travel with the app (Ghostty's MIT notice must accompany libghostty).
 cp LICENSE NOTICE "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" << PLIST
@@ -29,6 +32,7 @@ cat > "$APP/Contents/Info.plist" << PLIST
   <key>CFBundleIdentifier</key><string>local.herdr-mac.prototype</string>
   <key>CFBundleExecutable</key><string>HerdrMac</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleVersion</key><string>$BUILD</string>

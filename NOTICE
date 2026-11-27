@@ -7,8 +7,6 @@ herdr-app), licensed under the Apache License, Version 2.0, adapted for Swift:
   port herdr-app's herdr-core client (src/hc.rs).
 - Sources/HerdrCore/HerdrSettings.swift carries herdr-app's theme palettes (graphite, ink,
   moss, paper; src/settings.rs).
-- Resources/AppIcon.svg (and AppIcon.icns rendered from it) uses the ram path from Herdr's
-  assets/logo.svg, via herdr-app's assets/icons/herdr-ui-icon-clean.svg.
 
 This product includes work from Ghostty (https://github.com/ghostty-org/ghostty):
 libghostty, linked into the app, and Sources/TerminalKit/GhosttySurfaceView.swift, adapted

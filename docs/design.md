@@ -81,6 +81,8 @@ A Swift port of herdr-app's `src/hc.rs` (Apache-2.0):
   replaces itself.
 - Packaging: SwiftPM and `scripts/bundle.sh`; no .xcodeproj. Debug builds include test hooks
   (`DebugHarness`: snapshots and scripted keys over signals); release builds don't.
+- The icon is an Icon Composer file (`Resources/AppIcon.icon`), compiled by `actool`, so
+  macOS draws it in Liquid Glass, with its own dark, clear and tinted versions.
 
 ## Mods
 

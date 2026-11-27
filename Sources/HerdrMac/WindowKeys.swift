@@ -37,6 +37,7 @@ struct WindowKeys: NSViewRepresentable {
             stop()
             guard window != nil else { return }
             publish()
+            DebugHarness.trace("monitor installed for window \(window!.windowNumber)")
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
                 guard let self else { return event }
                 // A release belongs to its press, wherever focus went in between (⌘` to
@@ -45,6 +46,7 @@ struct WindowKeys: NSViewRepresentable {
                     return self.swallowed.remove(event.keyCode) != nil ? nil : event
                 }
                 guard let window = self.window, event.window === window, window.attachedSheet == nil else { return event }
+                DebugHarness.trace("keyDown \(event.keyCode) '\(event.characters(byApplyingModifiers: []) ?? "?")' mods \(event.modifierFlags.intersection([.command, .control, .option, .shift]).rawValue >> 16) → \(Self.isCloseTab(event) ? "close tab" : Self.navigation(for: event).map { "\($0)" } ?? "not ours")")
                 if Self.isCloseTab(event) {
                     self.swallowed.insert(event.keyCode)
                     self.closeTab?()

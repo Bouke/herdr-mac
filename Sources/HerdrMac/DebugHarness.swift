@@ -19,11 +19,14 @@ import TerminalKit
 ///     nav tabNext | nav tab:2 | nav space:1           run a switching command as the Go menu does
 ///     menu                                            log the Go menu's items
 ///     activate                                        bring the app forward (takes focus!)
-///     wait 300 | log label | shot name
+///     wait 300 | log label | shot name | where (the window's frame)
 enum DebugHarness {
     /// What each window shows, by window number (WindowKeys publishes it).
     @MainActor static var selections: [Int: String] = [:]
     @MainActor static var selection: String? { window.flatMap { selections[$0.windowNumber] } }
+    /// Lines from inside the app (the key monitor...), shown by the `trace` script line.
+    @MainActor static var traces: [String] = []
+    @MainActor static func trace(_ line: String) { traces.append(line); if traces.count > 100 { traces.removeFirst() } }
     /// The window's switcher, as the Go menu calls it.
     @MainActor static var navigate: ((Navigation) -> Void)?
     private nonisolated(unsafe) static var sources: [DispatchSourceSignal] = []
@@ -100,9 +103,9 @@ enum DebugHarness {
             delay = 0
         case "activate":
             // Takes focus from whatever the person is doing: only when the script asks.
-            NSApp.activate()
+            NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
-            delay = 0.5
+            delay = 0.8
         case "wait": delay = (Double(arg) ?? 300) / 1000
         case "log": log.append("\(arg): selection=\(selection ?? "nil") key=\(NSApp.keyWindow != nil) responder=\(type(of: window?.firstResponder as Any))"); delay = 0
         case "nav":
@@ -131,6 +134,8 @@ enum DebugHarness {
             log.append("pke \(arg): switch=\(nav) terminal-binding=\(binding)")
             delay = 0
         case "menu": log.append("menu: \(goMenu())"); delay = 0
+        case "quit": NSApp.terminate(nil); delay = 0
+        case "where": log.append("where: \(window.map { "\($0.frame)" } ?? "no window")"); delay = 0
         case "frame":
             // frame x y w h: move the window as a person would (autosave sees it).
             let v = arg.split(separator: " ").compactMap { Double($0) }
@@ -152,6 +157,26 @@ enum DebugHarness {
                 }
             }
             delay = seconds + 0.3
+        case "trace":
+            log.append("trace: " + (traces.isEmpty ? "(nothing)" : traces.joined(separator: " | ")))
+            traces = []
+            delay = 0
+        case "post":
+            // Into the app's event queue, the way real keys arrive (run loop, then sendEvent).
+            guard let (code, chars, flags) = combo(arg), let window else { finish("bad key: \(arg)"); return }
+            for type in [NSEvent.EventType.keyDown, .keyUp] {
+                if let e = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                                            windowNumber: window.windowNumber, context: nil, characters: chars,
+                                            charactersIgnoringModifiers: chars, isARepeat: false, keyCode: code) {
+                    NSApp.postEvent(e, atStart: false)
+                }
+            }
+        case "updatemanual":
+            Updater.shared.check(manual: true)
+            delay = 3
+        case "updatemessage":
+            log.append("message: \(Updater.shared.message ?? "none") | sheet: \(window?.attachedSheet != nil) | windows: \(NSApp.windows.filter { $0.isVisible }.map { String(describing: type(of: $0)) }.joined(separator: ","))")
+            delay = 0
         case "updatecheck":
             Updater.shared.check(manual: false)
             delay = 2
@@ -264,5 +289,6 @@ enum DebugHarness {
     @MainActor static var selections: [Int: String] = [:]
     @MainActor static var navigate: ((Navigation) -> Void)?
     static func install() {}
+    static func trace(_ line: String) {}
 }
 #endif

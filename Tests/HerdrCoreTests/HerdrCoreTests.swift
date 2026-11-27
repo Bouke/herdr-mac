@@ -187,3 +187,20 @@ import Testing
     #expect(j["a"] == .bool(true) && j["b"] == .number(1) && j["c"] == .number(1.5))
     #expect(j["d"] == .array([.bool(false), .null, .string("x")]) && j["e"]["f"] == .number(0))
 }
+
+@Test func labelledTerminalsKeepTheirSpaceWithoutHerdr() throws {
+    func t(_ a: String, _ space: String?, _ tab: String?, _ ms: Double, live: Bool = true) throws -> CoreTerminal {
+        var labels: JSON = [:]
+        if let space { labels["herdr.space"] = .string(space) }
+        if let tab { labels["herdr.tab"] = .string(tab) }
+        return CoreTerminal(["address": .string(a), "state": .string(live ? "live" : "finished"), "cwd": "/r",
+                             "created_ms": .number(ms), "labels": labels])
+    }
+    let terminals = [try t("t3", "sp1", "tbB", 3), try t("t1", "sp1", "tbA", 1), try t("t2", "sp1", "tbA", 2),
+                     try t("t4", nil, nil, 4), try t("t5", "sp2", "tbC", 5, live: false), try t("t6", "sp1", "tbZ", 6)]
+    let tabs = HerdrDocument.labelledTabs(terminals, placed: ["t6"])
+    #expect(tabs.map(\.tab.id) == ["tbA", "tbB"], "oldest first; unlabelled, ended and placed terminals left out")
+    #expect(tabs[0].tab.terminals == ["t1", "t2"])
+    let spaces = HerdrDocument.merge([], pending: tabs)
+    #expect(spaces.map(\.id) == ["sp1"] && spaces[0].tabs.count == 2)
+}

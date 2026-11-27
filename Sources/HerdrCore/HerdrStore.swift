@@ -10,8 +10,12 @@ public final class HerdrStore {
     public private(set) var connection: Connection = .connecting
     public private(set) var terminals: [String: CoreTerminal] = [:]
     /// Herdr's spaces and tabs: its document, plus tabs this app started that Herdr hasn't
-    /// written into the document yet (so a new tab shows at once, not after Herdr's round trip).
-    public var spaces: [Space] { HerdrDocument.merge(documentSpaces, pending: pendingTabs) }
+    /// written into the document yet (so a new tab shows at once, not after Herdr's round trip),
+    /// plus labelled terminals no tab holds (Herdr not running to adopt them).
+    public var spaces: [Space] {
+        let placed = Set(documentSpaces.flatMap { $0.tabs.flatMap(\.terminals) })
+        return HerdrDocument.merge(documentSpaces, pending: pendingTabs + HerdrDocument.labelledTabs(Array(terminals.values), placed: placed))
+    }
     private var documentSpaces: [Space] = []
     private var pendingTabs: [PendingTab] = []
     public private(set) var documentVersion: Int = 0

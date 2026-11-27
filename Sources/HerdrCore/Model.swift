@@ -114,6 +114,26 @@ public enum HerdrDocument {
         return out
     }
 
+    /// Tabs for live terminals that carry Herdr's `herdr.space`/`herdr.tab` labels but that
+    /// no tab of the document holds: Herdr shows such a terminal there ("a terminal with
+    /// those labels shows up there"), so they keep their space after a restart even while
+    /// herdr-app isn't running to write them into its document. Oldest terminal first.
+    public static func labelledTabs(_ terminals: [CoreTerminal], placed: Set<String>) -> [PendingTab] {
+        var tabs: [PendingTab] = []
+        for t in terminals.filter(\.isLive).sorted(by: { ($0.raw["created_ms"].double ?? 0) < ($1.raw["created_ms"].double ?? 0) })
+        where !placed.contains(t.address) {
+            guard let space = t.label("herdr.space"), let tab = t.label("herdr.tab") else { continue }
+            if let i = tabs.firstIndex(where: { $0.tab.id == tab }) {
+                var p = tabs[i].tab
+                p.terminals.append(t.address)
+                tabs[i] = PendingTab(space: tabs[i].space, folder: tabs[i].folder, tab: p)
+            } else {
+                tabs.append(PendingTab(space: space, folder: t.cwd, tab: SpaceTab(id: tab, name: "", index: 0, terminals: [t.address])))
+            }
+        }
+        return tabs
+    }
+
     /// New ids in Herdr's shape (`sp…` / `tb…` + 32 hex), so herdr-app adopts them.
     public static func newId(_ prefix: String) -> String {
         prefix + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()

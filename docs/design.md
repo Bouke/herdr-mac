@@ -33,8 +33,10 @@ A Swift port of herdr-app's `src/hc.rs` (Apache-2.0):
   Kinds: DATA 0, CREDIT 1, CLOSE 2, RESIZE 3, FOCUS 4, FACTS 5, AUTOMATIC_INPUT 6.
 - `HerdrStore` subscribes to events (a channel with credit, topped up per received byte),
   applies them as herdr-app does (`TerminalEvents`), and reads the `herdr-app` core document
-  for Space → Tab → terminals. A `size` event is kept but not announced (it fires on every
-  step of a window resize). Tabs started here show at once, before Herdr writes them into
+  for Space → Tab → terminals. A terminal carrying Herdr's `herdr.space`/`herdr.tab` labels
+  that no tab of the document holds shows in that tab anyway, as Herdr shows it, so tabs keep
+  their space while herdr-app isn't running to adopt them. A `size` event is kept but not
+  announced (it fires on every step of a window resize). Tabs started here show at once, before Herdr writes them into
   its document (`PendingTab`).
 - `Navigator`: tab/space/agent next, previous and N, as Herdr numbers them; `NavMemory`
   remembers the terminal per tab and space and the order they were shown in (⌘W and a

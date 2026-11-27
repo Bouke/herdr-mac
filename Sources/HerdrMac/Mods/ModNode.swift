@@ -243,14 +243,17 @@ struct ModNodeView: View {
         // scrolls. Without this a long list makes the whole window taller than the screen.
         let shrinks = !parentRow && (s.flex1 || s.shrinkH || s.fillH) || s.scroll || node.kind == "vlist"
         let fixedWidth: CGFloat? = { if case .px(let w) = s.width { return w }; return nil }()
-        if fixedWidth != nil || s.height != nil { v = AnyView(v.frame(width: fixedWidth, height: s.height)) }
+        // Content sits at the start of a box bigger than it, as in CSS (SwiftUI would centre it:
+        // a toggle's knob, `w(24)` with no justify, would float in the middle).
+        let alignment: Alignment = t.align == .trailing ? .trailing : node.kind == "h" || s.row == true ? .leading : .topLeading
+        if fixedWidth != nil || s.height != nil { v = AnyView(v.frame(width: fixedWidth, height: s.height, alignment: alignment)) }
         // Stretched (block in a column), grown or full: wide before painting, so the
         // background and borders cover the whole box, as in CSS.
         v = AnyView(v.frame(minWidth: s.minWidth,
                             maxWidth: s.fillW || (s.flex1 && parentRow) || (stretch && s.width == nil) || s.isPercentWidth ? .infinity : s.maxWidth,
                             minHeight: shrinks ? 0 : nil,
                             maxHeight: s.fillH || (s.flex1 && !parentRow) || node.kind == "vlist" ? .infinity : nil,
-                            alignment: t.align == .trailing ? .trailing : node.kind == "h" || s.row == true ? .leading : .topLeading))
+                            alignment: alignment))
         if shrinks { v = AnyView(v.clipped()) }
         // Positioned children cover the whole (sized) box, padding included, as CSS's
         // containing block; on the content alone an empty box would give them no room.

@@ -12,6 +12,8 @@ final class Updater {
     /// A message for the person: an install that failed, or "up to date" after Check for Updates.
     var message: String?
     private(set) var installing = false
+    /// Check for Updates found one: ask the person now (the toolbar button is easy to miss).
+    var askToInstall = false
 
     @ObservationIgnored private var timer: Timer?
 
@@ -27,22 +29,27 @@ final class Updater {
     }
 
     /// Where releases are: `HERDR_MAC_UPDATES`, herdr-mac.json's `"updates"`, else OneDrive.
+    nonisolated private static let cloud = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/CloudStorage")
+
     nonisolated private static func folders() -> [URL] {
         let fromFile = (try? Data(contentsOf: ModPlaces.url)).flatMap { try? JSON.parse($0) }?["updates"].string
         let override = ProcessInfo.processInfo.environment["HERDR_MAC_UPDATES"] ?? fromFile
-        let cloud = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/CloudStorage")
         return UpdateFeed.folders(cloudStorage: cloud, override: override)
     }
 
     func check(manual: Bool) {
-        let current = currentBuild
+        let current = currentBuild, version = currentVersion
         Task.detached {
             // Reading a OneDrive file can download it first: off the main thread.
-            let release = UpdateFeed.newest(in: Self.folders(), newerThan: current)
+            let folders = Self.folders()
+            let release = UpdateFeed.newest(in: folders, newerThan: current)
+            let why = manual && release == nil ? UpdateFeed.explain(folders: folders, cloudStorage: Self.cloud, current: current) : []
             await MainActor.run {
                 let me = Updater.shared
                 me.available = release
-                if manual && release == nil { me.message = "HerdrMac \(me.currentVersion) (\(current)) is the newest version." }
+                guard manual else { return }
+                if release != nil { me.askToInstall = true }
+                else { me.message = (["HerdrMac \(version) (\(current)) is the newest version I can find."] + why).joined(separator: "\n\n") }
             }
         }
     }

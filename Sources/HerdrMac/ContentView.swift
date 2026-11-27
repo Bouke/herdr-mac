@@ -19,6 +19,7 @@ struct ContentView: View {
     /// Terminals shown lately, most recent first: kept attached for quick switching.
     @State private var recent: [String] = []
     @State private var confirmingUpdate = false
+    @State private var showingUpdateMessage = false
     private let updater = Updater.shared
 
     struct CloseRequest {
@@ -52,15 +53,25 @@ struct ContentView: View {
         } message: { release in
             Text(release.notes.isEmpty ? "HerdrMac restarts with the new version; your terminals keep running." : release.notes)
         }
-        .alert("HerdrMac", isPresented: Binding(get: { updater.message != nil }, set: { if !$0 { updater.message = nil } })) {
+        .alert("HerdrMac", isPresented: $showingUpdateMessage) {
             Button("OK") { updater.message = nil }
         } message: { Text(updater.message ?? "") }
+        // Read here, in the view's update, so SwiftUI notices (a read only inside a Binding's
+        // getter isn't observed: the alert never came up).
+        .onChange(of: updater.message) { _, m in showingUpdateMessage = m != nil }
+        .onChange(of: updater.askToInstall) { _, ask in
+            if ask { confirmingUpdate = true; updater.askToInstall = false }
+        }
         .toolbar {
             if updater.available != nil {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Update", systemImage: updater.installing ? "hourglass" : "arrow.down.circle.fill") { confirmingUpdate = true }
                         .help("HerdrMac \(updater.available?.version ?? "") is available")
                         .disabled(updater.installing)
+                        // In the person's accent colour (System Settings → Appearance), as
+                        // macOS marks the one action that wants attention.
+                        .labelStyle(.titleAndIcon)
+                        .buttonStyle(.glassProminent)
                 }
             }
             ToolbarItem(placement: .primaryAction) {
